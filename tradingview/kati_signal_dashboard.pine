@@ -1,0 +1,47 @@
+//@version=6
+indicator("Kati Signal Dashboard", overlay=false)
+
+// Inputs
+emaFast = input.int(20, "EMA Fast")
+emaSlow = input.int(50, "EMA Slow")
+rsiLen = input.int(14, "RSI")
+
+// Calculations
+emaF = ta.ema(close, emaFast)
+emaS = ta.ema(close, emaSlow)
+rsi = ta.rsi(close, rsiLen)
+macd = ta.macd(close, 12, 26, 9)
+
+// Signal Score
+trendScore = close > emaF and emaF > emaS ? 1 : close < emaF and emaF < emaS ? -1 : 0
+momentumScore = macd[0] > 0 ? 1 : -1
+rsiScore = rsi < 30 ? 1 : rsi > 70 ? -1 : 0
+
+totalScore = trendScore + momentumScore + rsiScore
+
+// Dashboard Panel
+var table signalTable = table.new(position.top_right, 3, 5, bgcolor=color.new(color.gray, 90))
+if barstate.islast
+    table.cell(signalTable, 0, 0, "Indicator", text_color=color.white)
+    table.cell(signalTable, 1, 0, "Value", text_color=color.white)
+    table.cell(signalTable, 2, 0, "Signal", text_color=color.white)
+    
+    table.cell(signalTable, 0, 1, "EMA Trend", text_color=color.white)
+    table.cell(signalTable, 1, 1, str.tostring(trendScore), text_color=color.white)
+    emaColor = trendScore > 0 ? color.green : trendScore < 0 ? color.red : color.gray
+    table.cell(signalTable, 2, 1, "Bullish" if trendScore>0 else "Bearish" if trendScore<0 else "Neutral", bgcolor=emaColor)
+    
+    table.cell(signalTable, 0, 2, "RSI", text_color=color.white)
+    table.cell(signalTable, 1, 2, str.tostring(rsi, "#.##"), text_color=color.white)
+    rsiColor = rsi<30 ? color.green : rsi>70 ? color.red : color.gray
+    table.cell(signalTable, 2, 2, "Oversold" if rsi<30 else "Overbought" if rsi>70 else "Neutral", bgcolor=rsiColor)
+    
+    table.cell(signalTable, 0, 3, "MACD", text_color=color.white)
+    table.cell(signalTable, 1, 3, str.tostring(macd[0], "#.####"), text_color=color.white)
+    macdColor = macd[0] > 0 ? color.green : color.red
+    table.cell(signalTable, 2, 3, "Bullish" if macd[0]>0 else "Bearish", bgcolor=macdColor)
+    
+    table.cell(signalTable, 0, 4, "TOTAL SCORE", text_color=color.white)
+    table.cell(signalTable, 1, 4, str.tostring(totalScore), text_color=color.white)
+    totalColor = totalScore >= 2 ? color.green : totalScore <= -2 ? color.red : color.orange
+    table.cell(signalTable, 2, 4, "BUY" if totalScore>=2 else "SELL" if totalScore<=-2 else "WAIT", bgcolor=totalColor)
