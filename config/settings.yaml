@@ -1,8 +1,11 @@
 # Exchange Configuration
 exchange:
   name: binance
+  api_key: ${BINANCE_API_KEY}
+  secret_key: ${BINANCE_SECRET_KEY}
   testnet: true
   sandbox_mode: true
+  futures: false
 
 # Trading Parameters
 trading:
@@ -54,12 +57,25 @@ risk:
 
 # Signal Filtering
 signal_filter:
-  min_confluence: 3  # Minimum number of indicators agreeing
-  volatility_threshold: 0.02  # ATR percentage filter
-  min_volume_ratio: 1.5  # Volume must be > 1.5x average
+  min_confluence: 3
+  volatility_threshold: 0.02
+  min_volume_ratio: 1.5
 
 # Telegram Bot
 telegram:
+  bot_token: ${TELEGRAM_BOT_TOKEN}
+  chat_id: ${TELEGRAM_CHAT_ID}
   signal_cooldown_minutes: 5
   send_charts: true
   include_stop_loss: true
+
+# Backtest Settings
+backtest:
+  initial_capital: 10000.0
+  commission: 0.001
+  slippage: 0.0005
+
+# Logging
+logging:
+  level: INFO
+  file: trading_bot.log
