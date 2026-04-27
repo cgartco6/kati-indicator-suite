@@ -1,0 +1,155 @@
+//@version=6
+strategy("Kati Ultimate Strategy", overlay=true, initial_capital=10000, default_qty_type=strategy.percent_of_equity, default_qty_value=2)
+
+// ════════════════════════════════════════════════════════════════════════════════
+// INPUT PARAMETERS
+// ════════════════════════════════════════════════════════════════════════════════
+
+// EMA Settings
+ema_fast_len = input.int(20, "EMA Fast Length")
+ema_slow_len = input.int(50, "EMA Slow Length")
+
+// RSI Settings
+rsi_len = input.int(14, "RSI Length")
+rsi_oversold = input.int(30, "RSI Oversold Level")
+rsi_overbought = input.int(70, "RSI Overbought Level")
+
+// MACD Settings
+macd_fast = input.int(12, "MACD Fast Length")
+macd_slow = input.int(26, "MACD Slow Length")
+macd_signal = input.int(9, "MACD Signal Length")
+
+// ATR Settings
+atr_len = input.int(14, "ATR Length")
+atr_sl_mult = input.float(1.5, "ATR Stop Loss Multiplier")
+atr_tp_mult = input.float(3.0, "ATR Take Profit Multiplier")
+
+// Volume Settings
+min_volume_ratio = input.float(1.5, "Min Volume Ratio (x Avg)")
+
+// Risk Settings
+risk_percent = input.float(2, "Risk per Trade (%)")
+max_positions = input.int(1, "Max Concurrent Positions")
+
+// ════════════════════════════════════════════════════════════════════════════════
+// INDICATOR CALCULATIONS
+// ════════════════════════════════════════════════════════════════════════════════
+
+// EMAs
+ema_fast = ta.ema(close, ema_fast_len)
+ema_slow = ta.ema(close, ema_slow_len)
+
+// RSI
+rsi = ta.rsi(close, rsi_len)
+
+// MACD
+[macd_line, signal_line, macd_hist] = ta.macd(close, macd_fast, macd_slow, macd_signal)
+
+// VWAP
+vwap_value = ta.vwap(close)
+
+// ATR
+atr = ta.atr(atr_len)
+
+// Volume MA
+vol_ma = ta.sma(volume, 20)
+volume_ok = volume > vol_ma * min_volume_ratio
+
+// Bollinger Bands
+bb_mult = 2.0
+bb_mid = ta.sma(close, 20)
+bb_std = ta.stdev(close, 20)
+bb_upper = bb_mid + bb_std * bb_mult
+bb_lower = bb_mid - bb_std * bb_mult
+
+// Stochastic
+stoch_k = ta.stoch(close, high, low, 14)
+stoch_d = ta.sma(stoch_k, 3)
+
+// ════════════════════════════════════════════════════════════════════════════════
+// SIGNAL CONDITIONS
+// ════════════════════════════════════════════════════════════════════════════════
+
+// Long Entry Conditions (need ALL to be true)
+long_conditions = 
+    close > vwap_value and                                          // Price above VWAP
+    close > ema_fast and ema_fast > ema_slow and                    // EMA alignment
+    rsi < rsi_overbought and rsi > rsi_oversold and                 // RSI not extreme
+    macd_hist > 0 and                                               // MACD bullish
+    stoch_k < 80 and stoch_k > 20 and                               // Stochastic not extreme
+    volume_ok and                                                   // Volume confirmation
+    close > bb_lower                                                // Not below lower band
+
+// Short Entry Conditions (need ALL to be true)
+short_conditions = 
+    close < vwap_value and                                          // Price below VWAP
+    close < ema_fast and ema_fast < ema_slow and                    // EMA alignment
+    rsi < rsi_overbought and rsi > rsi_oversold and                 // RSI not extreme
+    macd_hist < 0 and                                               // MACD bearish
+    stoch_k < 80 and stoch_k > 20 and                               // Stochastic not extreme
+    volume_ok and                                                   // Volume confirmation
+    close < bb_upper                                                // Not above upper band
+
+// Exit Conditions
+exit_long = close < (ema_fast - atr * atr_sl_mult) or rsi > 85
+exit_short = close > (ema_fast + atr * atr_sl_mult) or rsi < 15
+
+// ════════════════════════════════════════════════════════════════════════════════
+// STRATEGY EXECUTION
+// ════════════════════════════════════════════════════════════════════════════════
+
+// Entry Signals
+if long_conditions
+    strategy.entry("Long", strategy.long)
+    alert("🟢 BUY SIGNAL | " + syminfo.ticker + " | Price: " + str.tostring(close) + " | RSI: " + str.tostring(rsi), alert.freq_once_per_bar_close)
+
+if short_conditions
+    strategy.entry("Short", strategy.short)
+    alert("🔴 SELL SIGNAL | " + syminfo.ticker + " | Price: " + str.tostring(close) + " | RSI: " + str.tostring(rsi), alert.freq_once_per_bar_close)
+
+// Exit Signals
+if exit_long
+    strategy.close("Long")
+if exit_short
+    strategy.close("Short")
+
+// ════════════════════════════════════════════════════════════════════════════════
+// VISUAL PLOTS
+// ════════════════════════════════════════════════════════════════════════════════
+
+// Indicator Lines
+plot(ema_fast, "EMA Fast", color.new(color.blue, 0), linewidth=2)
+plot(ema_slow, "EMA Slow", color.new(color.red, 0), linewidth=2)
+plot(vwap_value, "VWAP", color.new(color.purple, 0), linewidth=2, style=plot.style_circles)
+
+// Buy/Sell Markers
+plotshape(long_conditions, title="Buy Signal", location=location.belowbar, 
+         color=color.new(color.green, 0), style=shape.triangleup, size=size.small)
+plotshape(short_conditions, title="Sell Signal", location=location.abovebar, 
+         color=color.new(color.red, 0), style=shape.triangledown, size=size.small)
+
+// Bollinger Bands
+plot(bb_upper, "BB Upper", color.new(color.gray, 70), linewidth=1)
+plot(bb_mid, "BB Middle", color.new(color.gray, 80), linewidth=1)
+plot(bb_lower, "BB Lower", color.new(color.gray, 70), linewidth=1)
+
+// ════════════════════════════════════════════════════════════════════════════════
+// PANEL INDICATORS (Separate pane)
+// ════════════════════════════════════════════════════════════════════════════════
+
+// RSI Panel
+hline(70, "RSI OB", color.new(color.red, 50), hline.style_dotted)
+hline(30, "RSI OS", color.new(color.green, 50), hline.style_dotted)
+plot(rsi, "RSI", color.new(color.orange, 0), 2, plot.type_line)
+
+// MACD Panel
+hline(0, "Zero", color.new(color.gray, 70))
+plot(macd_line, "MACD Line", color.new(color.blue, 0), 2, plot.type_line)
+plot(signal_line, "Signal Line", color.new(color.red, 0), 2, plot.type_line)
+macd_color = macd_hist >= 0 ? color.new(color.green, 0) : color.new(color.red, 0)
+plot(macd_hist, "Histogram", macd_color, 4, plot.type_columns)
+
+// Volume Panel
+color_volume = close > open ? color.new(color.green, 70) : color.new(color.red, 70)
+plot(volume, "Volume", color_volume, 4, plot.type_columns)
+plot(vol_ma, "Volume MA", color.new(color.blue, 60), 2, plot.type_line)
