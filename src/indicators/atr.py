@@ -1,7 +1,6 @@
 import pandas as pd
 
 def calculate_atr(data: pd.DataFrame, period: int = 14) -> pd.Series:
-    """Average True Range"""
     high = data['high']
     low = data['low']
     close = data['close'].shift(1)
@@ -12,5 +11,4 @@ def calculate_atr(data: pd.DataFrame, period: int = 14) -> pd.Series:
     return true_range.rolling(window=period).mean()
 
 def atr_trailing_stop(data: pd.DataFrame, atr: pd.Series, multiplier: float = 2.0) -> pd.Series:
-    """ATR-based trailing stop level"""
     return data['close'] - (atr * multiplier)
