@@ -1,1 +1,1 @@
-# Test suite for Kati Indicator Suite
+# Test suite
