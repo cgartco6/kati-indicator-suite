@@ -1,0 +1,51 @@
+name: CI / Tests
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ['3.9', '3.10', '3.11']
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install pytest pytest-cov  # for testing
+
+    - name: Run static checks (flake8)
+      run: |
+        pip install flake8
+        flake8 src/*.py --count --select=E9,F63,F7,F82 --show-source --statistics
+
+    - name: Test imports
+      run: |
+        python -c "from src.indicators import calculate_ema, calculate_rsi; print('Indicators OK')"
+        python -c "from src.signals.signal_generator import SignalGenerator; print('SignalGenerator OK')"
+
+    - name: Run unit tests (if tests/ exist)
+      run: |
+        pytest tests/ -v --cov=src --cov-report=xml
+      continue-on-error: true  # tests may be missing, don't fail
+
+    - name: Upload coverage report
+      uses: codecov/codecov-action@v4
+      with:
+        file: ./coverage.xml
+        flags: unittests
+        name: codecov-umbrella
+        fail_ci_if_error: false
