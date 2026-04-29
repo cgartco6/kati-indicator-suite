@@ -1,14 +1,30 @@
+# Core data handling
 pandas>=2.0.0
 numpy>=1.24.0
 yfinance>=0.2.0
+
+# Technical indicators (two options for compatibility)
 ta-lib>=0.4.25
+pandas-ta>=0.3.14b0
+
+# Visualization
 plotly>=5.14.0
 streamlit>=1.25.0
+matplotlib>=3.7.0
+
+# Configuration & environment
 python-dotenv>=1.0.0
 pyyaml>=6.0
-matplotlib>=3.7.0
+
+# Exchange & trading
 ccxt>=4.0.0
+
+# Telegram bot
 python-telegram-bot>=20.0
+
+# Scheduling & async
 schedule>=1.2.0
 websocket-client>=1.5.0
-pandas-ta>=0.3.14b0
+
+# Backtesting
+backtrader>=1.9.78.123  # optional, not required for core bot
